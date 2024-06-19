@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Genesys Cloud Dashboard</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f4f9;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+      }
+      h1 {
+        text-align: center;
+        color: #007BFF;
+        margin-bottom: 20px;
+      }
+      table {
+        width: 80%;
+        margin: 0 auto;
+        border-collapse: collapse;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        background-color: #fff;
+      }
+      th, td {
+        padding: 15px;
+        border: 1px solid #ddd;
+        text-align: center;
+      }
+      th {
+        background-color: #007BFF;
+        color: #fff;
+        font-weight: bold;
+      }
+      tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+      tr:hover {
+        background-color: #f1f1f1;
+      }
+      .flashing {
+        animation: flash 1.5s infinite;
+      }
+      @keyframes flash {
+        0% { background-color: #ff4d4d; }
+        50% { background-color: #fff; }
+        100% { background-color: #ff4d4d; }
+      }
+      @media (max-width: 768px) {
+        table {
+          width: 100%;
+        }
+        th, td {
+          padding: 10px;
+        }
+      }
+      .container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      }
+      .refresh-button {
+        background-color: #007BFF;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        margin: 20px;
+        cursor: pointer;
+        font-size: 16px;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        transition: background-color 0.3s ease;
+      }
+      .refresh-button:hover {
+        background-color: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Live Queue Stats</h1>
+      <table>
+        <thead>
+          <tr>
+            <th>Queue Name</th>
+            <th>Calls Waiting</th>
+            <th>Interactions</th>
+  
+          </tr>
+        </thead>
+        <tbody id="stats">
+        </tbody>
+      </table>
+      <button class="refresh-button" onclick="fetchStats()">Refresh Now</button>
+    </div>
+    <script>
+      async function fetchStats() {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        
+        console.log(data);  // Log the entire response for debugging
+
+        const statsElement = document.getElementById('stats');
+        statsElement.innerHTML = '';  // Clear previous stats
+
+        if (data.results && data.results.length > 0) {
+          data.results.forEach(result => {
+            if (result.group.mediaType === 'voice') {  // Filter for voice interactions
+              const row = document.createElement('tr');
+              const queueNameCell = document.createElement('td');
+              const callsWaitingCell = document.createElement('td');
+              const interactionsCell = document.createElement('td');
+
+
+              queueNameCell.innerText = result.queueName;
+
+              // Find the relevant metrics
+              const callsWaitingMetric = result.data.find(metric => metric.metric === "oWaiting");
+              const interactionsMetric = result.data.find(metric => metric.metric === "oInteracting");
+
+
+              const callsWaiting = callsWaitingMetric ? callsWaitingMetric.stats.count : 0;
+              const interactions = interactionsMetric ? interactionsMetric.stats.count : 0;
+
+
+              callsWaitingCell.innerText = callsWaiting;
+              if (callsWaiting > 0) {
+                callsWaitingCell.classList.add('flashing');
+              } else {
+                callsWaitingCell.classList.remove('flashing');
+              }
+              interactionsCell.innerText = interactions;
+
+
+              row.appendChild(queueNameCell);
+              row.appendChild(callsWaitingCell);
+              row.appendChild(interactionsCell);
+
+
+              statsElement.appendChild(row);
+            }
+          });
+        } else {
+          statsElement.innerHTML = '<tr><td colspan="5">No data available</td></tr>';
+        }
+      }
+      fetchStats();
+      setInterval(fetchStats, 5000); // Refresh every 5 seconds
+    </script>
+  </body>
+</html>
